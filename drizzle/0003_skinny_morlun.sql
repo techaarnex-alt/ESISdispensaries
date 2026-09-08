@@ -1,0 +1,1 @@
+ALTER TABLE `lab_entries` ADD `ip_holder_name` text DEFAULT '' NOT NULL;

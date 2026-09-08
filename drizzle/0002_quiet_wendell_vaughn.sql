@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `lab_tests_location_name_unique` ON `lab_tests` (`location_id`,`name`);

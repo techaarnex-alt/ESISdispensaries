@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const labEntries = sqliteTable(
   'lab_entries',
@@ -12,6 +12,7 @@ export const labEntries = sqliteTable(
     age: text('age').notNull(),
     sex: text('sex').notNull(),
     relationship: text('relationship').notNull(),
+    ipHolderName: text('ip_holder_name').notNull().default(''),
     testsJson: text('tests_json').notNull(),
     status: text('status').notNull().default('Collected'),
     createdAt: integer('created_at').notNull(),
@@ -40,4 +41,40 @@ export const labSessions = sqliteTable(
     expiresAt: integer('expires_at').notNull(),
   },
   (table) => [index('idx_lab_sessions_expiry').on(table.expiresAt)],
+);
+
+export const labTests = sqliteTable(
+  'lab_tests',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    locationId: text('location_id').notNull(),
+    name: text('name').notNull(),
+    category: text('category').notNull(),
+    ratePaise: integer('rate_paise').notNull(),
+    referenceRange: text('reference_range').notNull().default(''),
+    active: integer('active').notNull().default(1),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('lab_tests_location_name_unique').on(table.locationId, table.name),
+    index('idx_lab_tests_location_active').on(table.locationId, table.active, table.name),
+  ],
+);
+
+export const labEntryTests = sqliteTable(
+  'lab_entry_tests',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    entryId: integer('entry_id').notNull(),
+    testId: integer('test_id'),
+    testName: text('test_name').notNull(),
+    ratePaise: integer('rate_paise').notNull(),
+    resultValue: text('result_value').notNull().default(''),
+    resultNote: text('result_note').notNull().default(''),
+    resultStatus: text('result_status').notNull().default('Pending'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    index('idx_lab_entry_tests_entry_status').on(table.entryId, table.resultStatus),
+  ],
 );
