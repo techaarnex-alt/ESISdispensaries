@@ -20,6 +20,11 @@ export const labEntries = sqliteTable(
   (table) => [index('idx_lab_entries_location_created').on(table.locationId, table.createdAt)],
 );
 
+export const ipSequences = sqliteTable('ip_sequences', {
+  locationId: text('location_id').primaryKey(),
+  lastNumber: integer('last_number').notNull(),
+});
+
 export const customerReviews = sqliteTable(
   'customer_reviews',
   {
