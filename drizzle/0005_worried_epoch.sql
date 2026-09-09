@@ -1,0 +1,1 @@
+ALTER TABLE `lab_entries` ADD `transferred_from_location_id` text;

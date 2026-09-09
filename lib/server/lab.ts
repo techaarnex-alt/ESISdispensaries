@@ -10,13 +10,13 @@ export type Branch = {
 };
 
 export const BRANCHES: Branch[] = [
-  { id: 'sarojini', short: 'SN', name: 'ESI Dispensary Sarojani Nagar, Lucknow', user: 'sarojini', password: 'ESI@2026', reportPrefix: 'LKO-SN' },
-  { id: 'aishbagh', short: 'AB', name: 'ESI Dispensary Aishbagh, Lucknow', user: 'aishbagh', password: 'ESI@2026', reportPrefix: 'LKO-AB' },
-  { id: 'golaganj', short: 'GG', name: 'ESI Dispensary Golaganj (KGMU), Lucknow', user: 'golaganj', password: 'ESI@2026', reportPrefix: 'LKO-GG' },
-  { id: 'sandeela', short: 'SD', name: 'ESI Dispensary Sandeela, Hardoi', user: 'sandeela', password: 'ESI@2026', reportPrefix: 'HRD-SD' },
-  { id: 'sitapur', short: 'ST', name: 'ESI Dispensary Sitapur', user: 'sitapur', password: 'ESI@2026', reportPrefix: 'STP-ST' },
-  { id: 'barabanki', short: 'BB', name: 'ESI Dispensary Barabanki', user: 'barabanki', password: 'ESI@2026', reportPrefix: 'BBK-BB' },
-  { id: 'raebareli', short: 'RB', name: 'ESI Dispensary Raebareli', user: 'raebareli', password: 'ESI@2026', reportPrefix: 'RBL-RB' },
+  { id: 'sarojini', short: 'SN', name: 'ESIS Dispensary Sarojani Nagar, Lucknow', user: 'sarojini', password: 'ESI@2026', reportPrefix: 'LKO-SN' },
+  { id: 'aishbagh', short: 'AB', name: 'ESIS Dispensary Aishbagh, Lucknow', user: 'aishbagh', password: 'ESI@2026', reportPrefix: 'LKO-AB' },
+  { id: 'golaganj', short: 'GG', name: 'ESIS Dispensary Golaganj (KGMU), Lucknow', user: 'golaganj', password: 'ESI@2026', reportPrefix: 'LKO-GG' },
+  { id: 'sandeela', short: 'SD', name: 'ESIS Dispensary Sandeela, Hardoi', user: 'sandeela', password: 'ESI@2026', reportPrefix: 'HRD-SD' },
+  { id: 'sitapur', short: 'ST', name: 'ESIS Dispensary Sitapur', user: 'sitapur', password: 'ESI@2026', reportPrefix: 'STP-ST' },
+  { id: 'barabanki', short: 'BB', name: 'ESIS Dispensary Barabanki', user: 'barabanki', password: 'ESI@2026', reportPrefix: 'BBK-BB' },
+  { id: 'raebareli', short: 'RB', name: 'ESIS Dispensary Raebareli', user: 'raebareli', password: 'ESI@2026', reportPrefix: 'RBL-RB' },
 ];
 
 type Runtime = { DB: D1Database };

@@ -1,11 +1,11 @@
-import { cleanText, db, json, sessionBranch } from '@/lib/server/lab';
+import { branchById, cleanText, db, json, sessionBranch } from '@/lib/server/lab';
 
-type EntryRow = { id: number; report_number: string; patient: string; patient_id: string; ip_number: string; age: string; sex: string; relationship: string; ip_holder_name: string; status: string; created_at: number };
-type ResultRow = { id: number; test_name: string; rate_paise: number; result_value: string; result_note: string; result_status: string };
+type EntryRow = { id: number; report_number: string; patient: string; registration_number: string; ip_number: string; age: string; sex: string; relationship: string; ip_holder_name: string; transferred_from_location_id: string | null; status: string; created_at: number };
+type ResultRow = { id: number; test_name: string; result_value: string; result_note: string; result_status: string };
 const resultStatuses = new Set(['Pending', 'In progress', 'Completed']);
 
 function resultPayload(row: ResultRow) {
-  return { id: row.id, testName: row.test_name, ratePaise: row.rate_paise, resultValue: row.result_value, resultNote: row.result_note, resultStatus: row.result_status };
+  return { id: row.id, testName: row.test_name, resultValue: row.result_value, resultNote: row.result_note, resultStatus: row.result_status };
 }
 
 export async function GET(request: Request) {
@@ -13,10 +13,10 @@ export async function GET(request: Request) {
   if (!branch) return json({ error: 'Sign in required.' }, 401);
   const entryId = Number(new URL(request.url).searchParams.get('entryId'));
   if (!Number.isInteger(entryId) || entryId < 1) return json({ error: 'Choose a valid test entry.' }, 400);
-  const entry = await db().prepare('SELECT id, report_number, patient, patient_id, ip_number, age, sex, relationship, ip_holder_name, status, created_at FROM lab_entries WHERE id = ? AND location_id = ?').bind(entryId, branch.id).first<EntryRow>();
+  const entry = await db().prepare('SELECT id, report_number, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id, status, created_at FROM lab_entries WHERE id = ? AND location_id = ?').bind(entryId, branch.id).first<EntryRow>();
   if (!entry) return json({ error: 'This test entry is not available at your location.' }, 404);
-  const rows = await db().prepare('SELECT id, test_name, rate_paise, result_value, result_note, result_status FROM lab_entry_tests WHERE entry_id = ? ORDER BY id').bind(entry.id).all<ResultRow>();
-  return json({ entry: { recordId: entry.id, id: entry.report_number, patient: entry.patient, patientId: entry.patient_id, ip: entry.ip_number, age: entry.age, sex: entry.sex, relationship: entry.relationship, ipHolderName: entry.ip_holder_name, status: entry.status, date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(entry.created_at)) }, results: (rows.results || []).map(resultPayload) });
+  const rows = await db().prepare('SELECT id, test_name, result_value, result_note, result_status FROM lab_entry_tests WHERE entry_id = ? ORDER BY id').bind(entry.id).all<ResultRow>();
+  return json({ entry: { recordId: entry.id, id: entry.report_number, patient: entry.patient, registrationNumber: entry.registration_number, ip: entry.ip_number, age: entry.age, sex: entry.sex, relationship: entry.relationship, ipHolderName: entry.ip_holder_name, transferredFrom: entry.transferred_from_location_id ? branchById(entry.transferred_from_location_id)?.name || '' : '', status: entry.status, date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(entry.created_at)) }, results: (rows.results || []).map(resultPayload) });
 }
 
 export async function PATCH(request: Request) {
@@ -44,6 +44,6 @@ export async function PATCH(request: Request) {
   const statuses = (allResults.results || []).map((row) => row.result_status);
   const overall = statuses.length && statuses.every((status) => status === 'Completed') ? 'Completed' : statuses.some((status) => status === 'In progress' || status === 'Completed') ? 'In progress' : 'Collected';
   await db().prepare('UPDATE lab_entries SET status = ? WHERE id = ? AND location_id = ?').bind(overall, entry.id, branch.id).run();
-  const latest = await db().prepare('SELECT id, test_name, rate_paise, result_value, result_note, result_status FROM lab_entry_tests WHERE entry_id = ? ORDER BY id').bind(entry.id).all<ResultRow>();
+  const latest = await db().prepare('SELECT id, test_name, result_value, result_note, result_status FROM lab_entry_tests WHERE entry_id = ? ORDER BY id').bind(entry.id).all<ResultRow>();
   return json({ status: overall, results: (latest.results || []).map(resultPayload) });
 }

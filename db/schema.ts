@@ -7,20 +7,24 @@ export const labEntries = sqliteTable(
     reportNumber: text('report_number').notNull().unique(),
     locationId: text('location_id').notNull(),
     patient: text('patient').notNull(),
-    patientId: text('patient_id').notNull(),
+    registrationNumber: text('registration_number').notNull(),
     ipNumber: text('ip_number').notNull(),
     age: text('age').notNull(),
     sex: text('sex').notNull(),
     relationship: text('relationship').notNull(),
     ipHolderName: text('ip_holder_name').notNull().default(''),
+    transferredFromLocationId: text('transferred_from_location_id'),
     testsJson: text('tests_json').notNull(),
     status: text('status').notNull().default('Collected'),
     createdAt: integer('created_at').notNull(),
   },
-  (table) => [index('idx_lab_entries_location_created').on(table.locationId, table.createdAt)],
+  (table) => [
+    uniqueIndex('lab_entries_location_registration_number_unique').on(table.locationId, table.registrationNumber),
+    index('idx_lab_entries_location_created').on(table.locationId, table.createdAt),
+  ],
 );
 
-export const ipSequences = sqliteTable('ip_sequences', {
+export const registrationSequences = sqliteTable('registration_sequences', {
   locationId: text('location_id').primaryKey(),
   lastNumber: integer('last_number').notNull(),
 });
@@ -55,7 +59,6 @@ export const labTests = sqliteTable(
     locationId: text('location_id').notNull(),
     name: text('name').notNull(),
     category: text('category').notNull(),
-    ratePaise: integer('rate_paise').notNull(),
     referenceRange: text('reference_range').notNull().default(''),
     active: integer('active').notNull().default(1),
     createdAt: integer('created_at').notNull(),
@@ -73,7 +76,6 @@ export const labEntryTests = sqliteTable(
     entryId: integer('entry_id').notNull(),
     testId: integer('test_id'),
     testName: text('test_name').notNull(),
-    ratePaise: integer('rate_paise').notNull(),
     resultValue: text('result_value').notNull().default(''),
     resultNote: text('result_note').notNull().default(''),
     resultStatus: text('result_status').notNull().default('Pending'),
