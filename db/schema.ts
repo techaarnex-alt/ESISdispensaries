@@ -15,7 +15,6 @@ export const labEntries = sqliteTable(
     ipHolderName: text('ip_holder_name').notNull().default(''),
     transferredFromLocationId: text('transferred_from_location_id'),
     testsJson: text('tests_json').notNull(),
-    status: text('status').notNull().default('Collected'),
     createdAt: integer('created_at').notNull(),
   },
   (table) => [
@@ -77,11 +76,11 @@ export const labEntryTests = sqliteTable(
     testId: integer('test_id'),
     testName: text('test_name').notNull(),
     resultValue: text('result_value').notNull().default(''),
+    referenceRange: text('reference_range').notNull().default(''),
     resultNote: text('result_note').notNull().default(''),
-    resultStatus: text('result_status').notNull().default('Pending'),
     updatedAt: integer('updated_at').notNull(),
   },
   (table) => [
-    index('idx_lab_entry_tests_entry_status').on(table.entryId, table.resultStatus),
+    index('idx_lab_entry_tests_entry').on(table.entryId),
   ],
 );

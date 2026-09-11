@@ -15,7 +15,7 @@ WITH RECURSIVE
     UNION ALL
     SELECT location_id, total, n + 1 FROM counters WHERE n < total
   )
-INSERT INTO lab_entries (report_number, location_id, patient, registration_number, ip_number, age, sex, relationship, tests_json, status, created_at)
+INSERT INTO lab_entries (report_number, location_id, patient, registration_number, ip_number, age, sex, relationship, tests_json, created_at)
 SELECT
   'DEMO-' || upper(location_id) || '-' || printf('%03d', n),
   location_id,
@@ -26,7 +26,6 @@ SELECT
   CASE WHEN n % 2 = 0 THEN 'Female' ELSE 'Male' END,
   'Self',
   CASE WHEN n % 3 = 0 THEN '["CBC","LFT"]' WHEN n % 2 = 0 THEN '["CBC","Blood Sugar"]' ELSE '["Thyroid Profile"]' END,
-  CASE WHEN n % 3 = 0 THEN 'Completed' WHEN n % 2 = 0 THEN 'In progress' ELSE 'Collected' END,
   1788840000000 + (n * 1000)
 FROM counters
 WHERE NOT EXISTS (
@@ -51,14 +50,14 @@ UNION ALL SELECT location_id, 'LFT', 'Biochemistry', 'As per laboratory referenc
 UNION ALL SELECT location_id, 'Thyroid Profile', 'Hormone & Electrolyte', 'As per laboratory reference range', 1, 1788842000000 FROM locations;
 
 -- Give existing demonstration registrations editable result rows as well.
-INSERT INTO lab_entry_tests (entry_id, test_id, test_name, result_value, result_note, result_status, updated_at)
+INSERT INTO lab_entry_tests (entry_id, test_id, test_name, result_value, reference_range, result_note, updated_at)
 SELECT
   entry.id,
   test.id,
   test.name,
-  CASE WHEN entry.status = 'Completed' THEN 'Verified' ELSE '' END,
-  CASE WHEN entry.status = 'Completed' THEN 'Demo result' ELSE '' END,
-  CASE WHEN entry.status = 'Completed' THEN 'Completed' WHEN entry.status = 'In progress' THEN 'In progress' ELSE 'Pending' END,
+  '',
+  test.reference_range,
+  '',
   entry.created_at
 FROM lab_entries entry
 JOIN json_each(entry.tests_json) selected
