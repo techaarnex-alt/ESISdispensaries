@@ -1,4 +1,4 @@
-import { branchById, cleanText, db, json, sessionBranch } from '@/lib/server/lab';
+import { cleanText, db, json, referralSourceById, sessionBranch } from '@/lib/server/lab';
 
 type TestRow = { id: number; name: string; reference_range: string };
 type SubmittedTest = { testId?: unknown };
@@ -21,13 +21,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const patient = cleanText(body?.patient, 100);
   const ipNumber = cleanText(body?.ip, 60);
-  const age = cleanText(body?.age, 3) || '—';
+  const age = cleanText(body?.age, 40) || '—';
   const sex = ['Male', 'Female', 'Other'].includes(cleanText(body?.sex, 20)) ? cleanText(body?.sex, 20) : '—';
   const relationship = cleanText(body?.relationship, 40) || 'Self';
   const ipHolderName = cleanText(body?.ipHolderName, 100);
   const transferredFromLocationId = cleanText(body?.transferredFromLocationId, 40);
-  const transferredFrom = transferredFromLocationId ? branchById(transferredFromLocationId) : undefined;
-  if (transferredFromLocationId && !transferredFrom) return json({ error: 'Choose a valid dispensary for the transfer source.' }, 400);
+  const transferredFrom = transferredFromLocationId ? referralSourceById(transferredFromLocationId) : undefined;
+  if (transferredFromLocationId && !transferredFrom) return json({ error: 'Choose a valid referred-from dispensary.' }, 400);
   const submittedTests = Array.isArray(body?.tests) ? body.tests.slice(0, 12) : [];
   if (!patient || !ipNumber || !submittedTests.length) return json({ error: 'Patient name, IP number, and at least one test are required.' }, 400);
   const available = await db().prepare('SELECT id, name, reference_range FROM lab_tests WHERE location_id = ? AND active = 1 ORDER BY name').bind(branch.id).all<TestRow>();

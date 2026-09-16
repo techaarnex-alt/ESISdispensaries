@@ -1,30 +1,65 @@
 import { env } from 'cloudflare:workers';
+import { ADDITIONAL_REFERRAL_SOURCES } from '@/lib/referral-sources';
 
 export type Branch = {
   id: string;
   short: string;
   name: string;
-  user: string;
-  password: string;
   reportPrefix: string;
 };
 
 export const BRANCHES: Branch[] = [
-  { id: 'sarojini', short: 'SN', name: 'ESIS Dispensary Sarojani Nagar, Lucknow', user: 'sarojini', password: 'ESI@2026', reportPrefix: 'LKO-SN' },
-  { id: 'aishbagh', short: 'AB', name: 'ESIS Dispensary Aishbagh, Lucknow', user: 'aishbagh', password: 'ESI@2026', reportPrefix: 'LKO-AB' },
-  { id: 'golaganj', short: 'GG', name: 'ESIS Dispensary Golaganj (KGMU), Lucknow', user: 'golaganj', password: 'ESI@2026', reportPrefix: 'LKO-GG' },
-  { id: 'sandeela', short: 'SD', name: 'ESIS Dispensary Sandeela, Hardoi', user: 'sandeela', password: 'ESI@2026', reportPrefix: 'HRD-SD' },
-  { id: 'sitapur', short: 'ST', name: 'ESIS Dispensary Sitapur', user: 'sitapur', password: 'ESI@2026', reportPrefix: 'STP-ST' },
-  { id: 'barabanki', short: 'BB', name: 'ESIS Dispensary Barabanki', user: 'barabanki', password: 'ESI@2026', reportPrefix: 'BBK-BB' },
-  { id: 'raebareli', short: 'RB', name: 'ESIS Dispensary Raebareli', user: 'raebareli', password: 'ESI@2026', reportPrefix: 'RBL-RB' },
+  { id: 'sarojini', short: 'SN', name: 'ESIS Dispensary Sarojani Nagar, Lucknow', reportPrefix: 'LKO-SN' },
+  { id: 'aishbagh', short: 'AB', name: 'ESIS Dispensary Aishbagh, Lucknow', reportPrefix: 'LKO-AB' },
+  { id: 'golaganj', short: 'GG', name: 'ESIS Dispensary Golaganj (KGMU), Lucknow', reportPrefix: 'LKO-GG' },
+  { id: 'sandeela', short: 'SD', name: 'ESIS Dispensary Sandeela, Hardoi', reportPrefix: 'HRD-SD' },
+  { id: 'sitapur', short: 'ST', name: 'ESIS Dispensary Sitapur', reportPrefix: 'STP-ST' },
+  { id: 'barabanki', short: 'BB', name: 'ESIS Dispensary Barabanki', reportPrefix: 'BBK-BB' },
+  { id: 'raebareli', short: 'RB', name: 'ESIS Dispensary Raebareli', reportPrefix: 'RBL-RB' },
 ];
 
-type Runtime = { DB: D1Database };
+type Runtime = { DB: D1Database; LAB_LOGIN_CREDENTIALS?: string };
 type SessionRow = { location_id: string; expires_at: number };
+type LoginAccount = { locationId: string; username: string; password: string };
 
 export const db = () => (env as unknown as Runtime).DB;
-export const publicBranch = (branch: Branch) => ({ id: branch.id, short: branch.short, name: branch.name, user: branch.user });
+export const publicBranch = (branch: Branch) => ({ id: branch.id, short: branch.short, name: branch.name });
 export const branchById = (id: string) => BRANCHES.find((branch) => branch.id === id);
+export const referralSourceById = (id: string) => branchById(id) ?? ADDITIONAL_REFERRAL_SOURCES.find((source) => source.id === id);
+
+export function loginAccount(user: string, password: string) {
+  const rawAccounts = (env as unknown as Runtime).LAB_LOGIN_CREDENTIALS?.trim();
+  if (!rawAccounts) throw new Error('LAB_LOGIN_CREDENTIALS is not configured.');
+
+  let accounts: unknown;
+  try {
+    accounts = JSON.parse(rawAccounts);
+  } catch {
+    throw new Error('LAB_LOGIN_CREDENTIALS must contain valid JSON.');
+  }
+
+  if (!Array.isArray(accounts)) throw new Error('LAB_LOGIN_CREDENTIALS must be a JSON array.');
+  const configuredAccounts = accounts.filter((item): item is LoginAccount => {
+    if (!item || typeof item !== 'object') return false;
+    const candidate = item as Partial<LoginAccount>;
+    return typeof candidate.locationId === 'string'
+      && typeof candidate.username === 'string'
+      && typeof candidate.password === 'string'
+      && Boolean(candidate.username.trim())
+      && Boolean(candidate.password)
+      && Boolean(branchById(candidate.locationId));
+  });
+
+  const uniqueLocationIds = new Set(configuredAccounts.map((account) => account.locationId));
+  const uniqueUsernames = new Set(configuredAccounts.map((account) => account.username.trim().toLowerCase()));
+  if (
+    configuredAccounts.length !== BRANCHES.length
+    || uniqueLocationIds.size !== BRANCHES.length
+    || uniqueUsernames.size !== BRANCHES.length
+  ) throw new Error('LAB_LOGIN_CREDENTIALS must have one valid, unique account for every location.');
+
+  return configuredAccounts.find((account) => account.username.trim().toLowerCase() === user && account.password === password) ?? null;
+}
 
 function cookieValue(request: Request, name: string) {
   const encoded = request.headers.get('cookie')?.split(';').map((item) => item.trim()).find((item) => item.startsWith(`${name}=`))?.slice(name.length + 1);

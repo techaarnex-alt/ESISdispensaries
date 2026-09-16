@@ -1,4 +1,4 @@
-import { branchById, cleanText, db, json, sessionBranch } from '@/lib/server/lab';
+import { cleanText, db, json, referralSourceById, sessionBranch } from '@/lib/server/lab';
 
 type EntryRow = { id: number; report_number: string; patient: string; registration_number: string; ip_number: string; age: string; sex: string; relationship: string; ip_holder_name: string; transferred_from_location_id: string | null; created_at: number };
 type ResultRow = { id: number; test_name: string; result_value: string; reference_range: string; result_note: string };
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const entry = await db().prepare('SELECT id, report_number, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id, created_at FROM lab_entries WHERE id = ? AND location_id = ?').bind(entryId, branch.id).first<EntryRow>();
   if (!entry) return json({ error: 'This test entry is not available at your location.' }, 404);
   const rows = await db().prepare('SELECT id, test_name, result_value, reference_range, result_note FROM lab_entry_tests WHERE entry_id = ? ORDER BY id').bind(entry.id).all<ResultRow>();
-  return json({ entry: { recordId: entry.id, id: entry.report_number, patient: entry.patient, registrationNumber: entry.registration_number, ip: entry.ip_number, age: entry.age, sex: entry.sex, relationship: entry.relationship, ipHolderName: entry.ip_holder_name, transferredFrom: entry.transferred_from_location_id ? branchById(entry.transferred_from_location_id)?.name || '' : '', date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(entry.created_at)) }, results: (rows.results || []).map(resultPayload) });
+  return json({ entry: { recordId: entry.id, id: entry.report_number, patient: entry.patient, registrationNumber: entry.registration_number, ip: entry.ip_number, age: entry.age, sex: entry.sex, relationship: entry.relationship, ipHolderName: entry.ip_holder_name, transferredFrom: entry.transferred_from_location_id ? referralSourceById(entry.transferred_from_location_id)?.name || '' : '', date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(entry.created_at)) }, results: (rows.results || []).map(resultPayload) });
 }
 
 export async function PATCH(request: Request) {

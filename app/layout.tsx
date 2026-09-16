@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ESIS Lucknow Laboratory Portal — Demo',
+  title: 'ESIS Lucknow Laboratory Portal',
   description: 'Location-separated laboratory test entries and reports for ESIS dispensaries in the Lucknow zone.',
 };
 
