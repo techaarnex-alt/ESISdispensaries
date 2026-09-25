@@ -1,4 +1,4 @@
-import { cleanText, db, json, sessionBranch } from '@/lib/server/lab';
+import { cleanText, db, ensurePathologyCatalogue, json, sessionBranch } from '@/lib/server/lab';
 
 type TestRow = { id: number; name: string; category: string; reference_range: string; active: number };
 
@@ -16,6 +16,7 @@ function bodyFields(body: Record<string, unknown> | null) {
 export async function GET(request: Request) {
   const branch = await sessionBranch(request);
   if (!branch) return json({ error: 'Sign in required.' }, 401);
+  await ensurePathologyCatalogue(branch.id);
   const result = await db().prepare('SELECT id, name, category, reference_range, active FROM lab_tests WHERE location_id = ? AND active = 1 ORDER BY category, name').bind(branch.id).all<TestRow>();
   return json({ tests: (result.results || []).map(testPayload) });
 }

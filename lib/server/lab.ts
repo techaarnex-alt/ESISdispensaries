@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers';
+import { PATHOLOGY_CATALOGUE } from '@/lib/pathology-catalogue';
 import { ADDITIONAL_REFERRAL_SOURCES } from '@/lib/referral-sources';
 
 export type Branch = {
@@ -26,6 +27,15 @@ export const db = () => (env as unknown as Runtime).DB;
 export const publicBranch = (branch: Branch) => ({ id: branch.id, short: branch.short, name: branch.name });
 export const branchById = (id: string) => BRANCHES.find((branch) => branch.id === id);
 export const referralSourceById = (id: string) => branchById(id) ?? ADDITIONAL_REFERRAL_SOURCES.find((source) => source.id === id);
+
+export async function ensurePathologyCatalogue(locationId: string) {
+  const createdAt = Date.now();
+  await db().batch(PATHOLOGY_CATALOGUE.map((test) => db().prepare(`
+    INSERT INTO lab_tests (location_id, name, category, reference_range, active, created_at)
+    VALUES (?, ?, ?, ?, 1, ?)
+    ON CONFLICT(location_id, name) DO NOTHING
+  `).bind(locationId, test.name, test.category, test.referenceRange, createdAt)));
+}
 
 export function loginAccount(user: string, password: string) {
   const rawAccounts = (env as unknown as Runtime).LAB_LOGIN_CREDENTIALS?.trim();
