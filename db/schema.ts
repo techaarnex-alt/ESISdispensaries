@@ -14,12 +14,13 @@ export const labEntries = sqliteTable(
     relationship: text('relationship').notNull(),
     ipHolderName: text('ip_holder_name').notNull().default(''),
     transferredFromLocationId: text('transferred_from_location_id'),
+    sourceEntryId: integer('source_entry_id'),
     testsJson: text('tests_json').notNull(),
     createdAt: integer('created_at').notNull(),
   },
   (table) => [
-    uniqueIndex('lab_entries_location_registration_number_unique').on(table.locationId, table.registrationNumber),
     index('idx_lab_entries_location_created').on(table.locationId, table.createdAt),
+    index('idx_lab_entries_source_entry').on(table.sourceEntryId),
   ],
 );
 

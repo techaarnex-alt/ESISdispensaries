@@ -1,6 +1,6 @@
 import { cleanText, db, json, referralSourceById, sessionBranch } from '@/lib/server/lab';
 
-type EntryRow = { id: number; report_number: string; patient: string; registration_number: string; ip_number: string; age: string; sex: string; relationship: string; ip_holder_name: string; transferred_from_location_id: string | null; tests_json: string; created_at: number };
+type EntryRow = { id: number; report_number: string; patient: string; registration_number: string; ip_number: string; age: string; sex: string; relationship: string; ip_holder_name: string; transferred_from_location_id: string | null; source_entry_id: number | null; tests_json: string; created_at: number };
 
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
 
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   const pattern = `%${escapeLike(search)}%`;
   const result = await db().prepare(`
-    SELECT id, report_number, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id, tests_json, created_at
+    SELECT id, report_number, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id, source_entry_id, tests_json, created_at
     FROM lab_entries
     WHERE location_id = ?
       AND (
@@ -37,6 +37,7 @@ export async function GET(request: Request) {
     relationship: entry.relationship,
     ipHolderName: entry.ip_holder_name,
     transferredFrom: entry.transferred_from_location_id ? referralSourceById(entry.transferred_from_location_id)?.name || '' : '',
+    sourceEntryId: entry.source_entry_id,
     tests: JSON.parse(entry.tests_json) as string[],
     date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(entry.created_at)),
   }));

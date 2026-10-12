@@ -3,6 +3,7 @@ import { cleanText, db, json, referralSourceById, sessionBranch } from '@/lib/se
 type TestRow = { id: number; name: string; reference_range: string };
 type SubmittedTest = { testId?: unknown };
 type RegistrationSequenceRow = { last_number: number };
+type ExistingEntryRow = { id: number; patient: string; registration_number: string; ip_number: string; age: string; sex: string; relationship: string; ip_holder_name: string; transferred_from_location_id: string | null };
 
 async function nextRegistrationNumber(locationId: string, locationShort: string) {
   const sequence = await db().prepare(`
@@ -19,13 +20,17 @@ export async function POST(request: Request) {
   const branch = await sessionBranch(request);
   if (!branch) return json({ error: 'Sign in required.' }, 401);
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-  const patient = cleanText(body?.patient, 100);
-  const ipNumber = cleanText(body?.ip, 60);
-  const age = cleanText(body?.age, 40) || '—';
-  const sex = ['Male', 'Female', 'Other'].includes(cleanText(body?.sex, 20)) ? cleanText(body?.sex, 20) : '—';
-  const relationship = cleanText(body?.relationship, 40) || 'Self';
-  const ipHolderName = cleanText(body?.ipHolderName, 100);
-  const transferredFromLocationId = cleanText(body?.transferredFromLocationId, 40);
+  const sourceEntryId = Number(body?.sourceEntryId);
+  const reopening = Number.isInteger(sourceEntryId) && sourceEntryId > 0;
+  const source = reopening ? await db().prepare('SELECT id, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id FROM lab_entries WHERE id = ? AND location_id = ?').bind(sourceEntryId, branch.id).first<ExistingEntryRow>() : null;
+  if (reopening && !source) return json({ error: 'This patient file is not available at your location.' }, 404);
+  const patient = source?.patient || cleanText(body?.patient, 100);
+  const ipNumber = source?.ip_number || cleanText(body?.ip, 60);
+  const age = source?.age || cleanText(body?.age, 40) || '—';
+  const sex = source?.sex || (['Male', 'Female', 'Other'].includes(cleanText(body?.sex, 20)) ? cleanText(body?.sex, 20) : '—');
+  const relationship = source?.relationship || cleanText(body?.relationship, 40) || 'Self';
+  const ipHolderName = source?.ip_holder_name || cleanText(body?.ipHolderName, 100);
+  const transferredFromLocationId = source?.transferred_from_location_id || cleanText(body?.transferredFromLocationId, 40);
   const transferredFrom = transferredFromLocationId ? referralSourceById(transferredFromLocationId) : undefined;
   if (transferredFromLocationId && !transferredFrom) return json({ error: 'Choose a valid referred-from dispensary.' }, 400);
   const submittedTests = Array.isArray(body?.tests) ? body.tests.slice(0, 12) : [];
@@ -41,10 +46,10 @@ export async function POST(request: Request) {
   if (!distinct.length) return json({ error: 'Choose tests from this location’s active test catalogue.' }, 400);
   const now = Date.now();
   const reportNumber = `${branch.reportPrefix}-${now.toString().slice(-6)}${Math.floor(Math.random() * 90 + 10)}`;
-  const registrationNumber = await nextRegistrationNumber(branch.id, branch.short);
-  const created = await db().prepare('INSERT INTO lab_entries (report_number, location_id, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id, tests_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(reportNumber, branch.id, patient, registrationNumber, ipNumber, age, sex, relationship, ipHolderName, transferredFrom?.id || null, JSON.stringify(distinct.map((test) => test.name)), now).run();
+  const registrationNumber = source?.registration_number || await nextRegistrationNumber(branch.id, branch.short);
+  const created = await db().prepare('INSERT INTO lab_entries (report_number, location_id, patient, registration_number, ip_number, age, sex, relationship, ip_holder_name, transferred_from_location_id, source_entry_id, tests_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(reportNumber, branch.id, patient, registrationNumber, ipNumber, age, sex, relationship, ipHolderName, transferredFrom?.id || null, source?.id || null, JSON.stringify(distinct.map((test) => test.name)), now).run();
   const recordId = Number(created.meta.last_row_id);
   if (!recordId) return json({ error: 'Unable to allocate this test entry.' }, 500);
   await db().batch(distinct.map((test) => db().prepare('INSERT INTO lab_entry_tests (entry_id, test_id, test_name, result_value, reference_range, result_note, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(recordId, test.id, test.name, '', test.reference_range, '', now)));
-  return json({ entry: { recordId, id: reportNumber, patient, registrationNumber, ip: ipNumber, age, sex, relationship, ipHolderName, transferredFrom: transferredFrom?.name || '', tests: distinct.map((test) => test.name), date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(now)) } }, 201);
+  return json({ entry: { recordId, id: reportNumber, patient, registrationNumber, ip: ipNumber, age, sex, relationship, ipHolderName, transferredFrom: transferredFrom?.name || '', sourceEntryId: source?.id || null, tests: distinct.map((test) => test.name), date: new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(now)) } }, 201);
 }
